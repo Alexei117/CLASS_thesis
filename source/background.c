@@ -403,7 +403,11 @@ int background_functions(
      Instead we sum up dp_dloga = p_prime/a_prime_over_a. The formula is
      p_prime = a_prime_over_a * dp_dloga = a_prime_over_a * Sum [ (w_prime/a_prime_over_a -3(1+w)w)rho].
      Note: The scalar field contribution must be added in the end, as an exception!*/
+  /*ET*/
   double dp_dloga;
+  double phi_bg = phi;
+  double phi_prime_bg = pvecback[pba->index_bg_phi_prime_scf];
+  double s_bg = 0.; /* s is frozen, can be passed as arg later */
 
   /** - initialize local variables */
   rho_tot = 0.;
@@ -442,6 +446,14 @@ int background_functions(
     rho_m += pvecback[pba->index_bg_rho_cdm];
   }
 
+  /* ET: entropic dark matter (dust) */
+  if (pba->has_edm == _TRUE_) {
+    pvecback[pba->index_bg_rho_edm] = pba->Omega0_edm * pow(pba->H0, 2) / pow(a, 3);
+    rho_tot += pvecback[pba->index_bg_rho_edm];
+    p_tot   += 0.;
+    rho_m   += pvecback[pba->index_bg_rho_edm];
+  }
+
   /* idm */
   if (pba->has_idm == _TRUE_) {
     pvecback[pba->index_bg_rho_idm] = pba->Omega0_idm * pow(pba->H0,2) / pow(a,3);
@@ -478,6 +490,7 @@ int background_functions(
     pvecback[pba->index_bg_V_scf] = V_scf(pba,phi); //V_scf(pba,phi); //write here potential as function of phi
     pvecback[pba->index_bg_dV_scf] = dV_scf(pba,phi); // dV_scf(pba,phi); //potential' as function of phi
     pvecback[pba->index_bg_ddV_scf] = ddV_scf(pba,phi); // ddV_scf(pba,phi); //potential'' as function of phi
+    pvecback[pba->index_bg_euler_coef] = B_edm_background(pba, s_bg, phi_bg, phi_prime_bg, a); /* ET: coupling coefficient B = n*theta' - d(rho)/ds */
     pvecback[pba->index_bg_rho_scf] = (phi_prime*phi_prime/(2*a*a) + V_scf(pba,phi))/3.; // energy of the scalar field. The field units are set automatically by setting the initial conditions
     pvecback[pba->index_bg_p_scf] =(phi_prime*phi_prime/(2*a*a) - V_scf(pba,phi))/3.; // pressure of the scalar field
     rho_tot += pvecback[pba->index_bg_rho_scf];
@@ -976,6 +989,7 @@ int background_indices(
   /** - initialize all flags: which species are present? */
 
   pba->has_cdm = _FALSE_;
+  pba->has_edm = _FALSE_; /* ET */
   pba->has_idm = _FALSE_;
   pba->has_ncdm = _FALSE_;
   pba->has_dcdm = _FALSE_;
@@ -990,6 +1004,9 @@ int background_indices(
 
   if (pba->Omega0_cdm != 0.)
     pba->has_cdm = _TRUE_;
+
+  if (pba->Omega0_edm != 0.) /* ET */
+    pba->has_edm = _TRUE_;   
 
   if (pba->Omega0_idm != 0.)
     pba->has_idm = _TRUE_;
@@ -1047,6 +1064,9 @@ int background_indices(
   /* - index for rho_cdm */
   class_define_index(pba->index_bg_rho_cdm,pba->has_cdm,index_bg,1);
 
+  /* - index for rho_edm */
+  class_define_index(pba->index_bg_rho_edm, pba->has_edm, index_bg, 1);   /* ET */
+
   /* - index for rho_idm  */
   class_define_index(pba->index_bg_rho_idm,pba->has_idm,index_bg,1);
 
@@ -1069,6 +1089,7 @@ int background_indices(
   class_define_index(pba->index_bg_V_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_dV_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_ddV_scf,pba->has_scf,index_bg,1);
+  class_define_index(pba->index_bg_euler_coef, pba->has_scf, index_bg, 1); /* ET */
   class_define_index(pba->index_bg_rho_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_p_scf,pba->has_scf,index_bg,1);
   class_define_index(pba->index_bg_p_prime_scf,pba->has_scf,index_bg,1);
@@ -1111,8 +1132,13 @@ int background_indices(
   /* -> critical density */
   class_define_index(pba->index_bg_rho_crit,_TRUE_,index_bg,1);
 
-  /* - index for Omega_m (non-relativistic density fraction) */
-  class_define_index(pba->index_bg_Omega_m,_TRUE_,index_bg,1);
+  /* ET: Omega_m defined whenever any non-relativistic species exists.
+   Without this, has_cdm = FALSE leaves index_bg_Omega_m = -1
+   and pba->Omega0_m becomes an out-of-bounds read. */
+  class_define_index(pba->index_bg_Omega_m,
+                    (pba->has_cdm || pba->has_edm || pba->has_idm
+                      || pba->has_dcdm || pba->has_ncdm),
+                    index_bg,1);
 
   /* -> conformal distance */
   class_define_index(pba->index_bg_conf_distance,_TRUE_,index_bg,1);
@@ -2098,6 +2124,8 @@ int background_solve(
   pba->Omega0_nfsm =  pba->Omega0_b;
   if (pba->has_cdm == _TRUE_)
     pba->Omega0_nfsm += pba->Omega0_cdm;
+  if (pba->has_edm == _TRUE_) 
+    pba->Omega0_nfsm += pba->Omega0_edm;   /* ET */
   if (pba->has_idm == _TRUE_)
     pba->Omega0_nfsm += pba->Omega0_idm;
   if (pba->has_dcdm == _TRUE_)
@@ -2440,6 +2468,7 @@ int background_output_titles(
   class_store_columntitle(titles,"(.)rho_g",_TRUE_);
   class_store_columntitle(titles,"(.)rho_b",_TRUE_);
   class_store_columntitle(titles,"(.)rho_cdm",pba->has_cdm);
+  class_store_columntitle(titles,"(.)rho_edm",pba->has_edm);   /* ET */
   class_store_columntitle(titles,"(.)rho_idm",pba->has_idm);
   if (pba->has_ncdm == _TRUE_) {
     for (n=0; n<pba->N_ncdm; n++) {
@@ -2466,6 +2495,7 @@ int background_output_titles(
   class_store_columntitle(titles,"V_scf",pba->has_scf);
   class_store_columntitle(titles,"V'_scf",pba->has_scf);
   class_store_columntitle(titles,"V''_scf",pba->has_scf);
+  class_store_columntitle(titles,"B_edm",pba->has_scf);   /* ET */
 
   class_store_columntitle(titles,"(.)rho_tot",_TRUE_);
   class_store_columntitle(titles,"(.)p_tot",_TRUE_);
@@ -2518,6 +2548,7 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_rho_g],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_b],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_rho_cdm],pba->has_cdm,storeidx);
+    class_store_double(dataptr,pvecback[pba->index_bg_rho_edm],pba->has_edm,storeidx);   /* ET */
     class_store_double(dataptr,pvecback[pba->index_bg_rho_idm],pba->has_idm,storeidx);
     if (pba->has_ncdm == _TRUE_) {
       for (n=0; n<pba->N_ncdm; n++) {
@@ -2542,6 +2573,7 @@ int background_output_data(
     class_store_double(dataptr,pvecback[pba->index_bg_V_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_dV_scf],pba->has_scf,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_ddV_scf],pba->has_scf,storeidx);
+    class_store_double(dataptr,pvecback[pba->index_bg_euler_coef],pba->has_scf,storeidx);   /* ET */
 
     class_store_double(dataptr,pvecback[pba->index_bg_rho_tot],_TRUE_,storeidx);
     class_store_double(dataptr,pvecback[pba->index_bg_p_tot],_TRUE_,storeidx);
@@ -2637,6 +2669,9 @@ int background_derivs(
   rho_M = pvecback[pba->index_bg_rho_b];
   if (pba->has_cdm == _TRUE_) {
     rho_M += pvecback[pba->index_bg_rho_cdm];
+  }
+  if (pba->has_edm == _TRUE_) {
+    rho_M += pvecback[pba->index_bg_rho_edm];   /* ET */
   }
   if (pba->has_idm == _TRUE_){
     rho_M += pvecback[pba->index_bg_rho_idm];
@@ -2808,6 +2843,10 @@ int background_output_budget(
       class_print_species("Cold Dark Matter",cdm);
       budget_matter+=pba->Omega0_cdm;
     }
+    if (pba->has_edm == _TRUE_) {
+    class_print_species("Entropic Dark Matter", edm);
+    budget_matter += pba->Omega0_edm;
+    } /*ET*/
     if (pba->has_idm == _TRUE_){
       class_print_species("Interacting DM - idr,b,g",idm);
       budget_matter+=pba->Omega0_idm;
@@ -3004,4 +3043,121 @@ double ddV_scf(
                struct background *pba,
                double phi) {
   return ddV_e_scf(pba,phi)*V_p_scf(pba,phi) + 2*dV_e_scf(pba,phi)*dV_p_scf(pba,phi) + V_e_scf(pba,phi)*ddV_p_scf(pba,phi);
+}
+
+/* ================================================================
+   ET: Field-space metric functions.
+   Signatures general; bodies = current specialization.
+   To change physics: edit BODY only.
+   ================================================================ */
+
+double G_00(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 1.;   /* currently: no kinetic term in s */
+}
+
+double G_01(struct background *pba, double s, double phi) {
+  (void)s; (void)phi;
+  return pba->scf_parameters[2];   /* currently: constant c_01 */
+}
+
+double G_11(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 1.;   /* currently: canonical kinetic in phi */
+}
+
+double G_11_ds(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 0.;   /* G_11 constant */
+}
+
+double G_11_dphi(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 0.;
+}
+
+double G_11_dsdphi(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 0.;
+}
+
+double G_11_dphidphi(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 0.;
+}
+
+double Gamma_011(struct background *pba, double s, double phi) {
+  /* General Christoffel:
+       Gamma^0_{11} = 1/2 G^{0c}(G_{c1,1} + G_{1c,1} - G_{11,c})
+     Currently: all metric derivatives = 0 -> Gamma = 0. */
+  (void)pba; (void)s; (void)phi;
+  return 0.;
+}
+
+/* ================================================================
+   ET: Potential functions.
+   ================================================================ */
+
+#define V_EDM_UNITS (1.44983e-7)  /* Teixeira unit factor: 1e-120 * 1.44983e113 */
+
+double V_edm(struct background *pba, double s, double phi) {
+  (void)s;
+  return pba->scf_parameters[1] * V_EDM_UNITS
+       * exp(-pba->scf_parameters[0] * phi);   /* V_0 e^{-lambda phi} */
+}
+
+double dV_edm_ds(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 0.;   /* V independent of s */
+}
+
+double dV_edm_dphi(struct background *pba, double s, double phi) {
+  (void)s;
+  return -pba->scf_parameters[0] * pba->scf_parameters[1] * V_EDM_UNITS
+       * exp(-pba->scf_parameters[0] * phi);
+}
+
+double ddV_edm_dsds(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 0.;
+}
+
+double ddV_edm_dsdphi(struct background *pba, double s, double phi) {
+  (void)pba; (void)s; (void)phi;
+  return 0.;
+}
+
+double ddV_edm_dphidphi(struct background *pba, double s, double phi) {
+  (void)s;
+  double lam = pba->scf_parameters[0];
+  return lam*lam * pba->scf_parameters[1] * V_EDM_UNITS
+       * exp(-lam * phi);
+}
+
+/* ================================================================
+   ET: Background coupling coefficient B.
+   General formula:
+     B = G_01*[phi''+2H*phi']/a^2 + Gamma_011*phi'^2/a^2 + V,s
+   with phi''+2H*phi' from KG.
+   In the specialized case (G_11=1, G_11,1=0):
+     phi''+2H*phi' = -a^2 * V,phi
+   -> B = -G_01*V,phi + Gamma_011*phi'^2/a^2 + V,s
+   ================================================================ */
+
+double B_edm_background(struct background *pba,
+                        double s, double phi, double phi_prime, double a) {
+  double G01    = G_01(pba, s, phi);
+  double G11    = G_11(pba, s, phi);
+  double G11_1  = G_11_dphi(pba, s, phi);
+  double Gam    = Gamma_011(pba, s, phi);
+  double dVs    = dV_edm_ds(pba, s, phi);
+  double dVphi  = dV_edm_dphi(pba, s, phi);
+
+  /* phi''+2H*phi' from KG: -(G_11,1*phi'^2/2 + a^2*V,phi)/G_11 */
+  double phi_pp_2Hphip = -(0.5 * G11_1 * phi_prime * phi_prime
+                           + a*a * dVphi) / G11;
+
+  return G01 * phi_pp_2Hphip / (a*a)
+       + Gam * phi_prime * phi_prime / (a*a)
+       + dVs;
 }

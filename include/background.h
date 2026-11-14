@@ -40,6 +40,10 @@ enum interpolation_method {inter_normal, inter_closeby};
  * modules.
  */
 
+ /* ET: scf_parameters layout:
+ *  [0]=lambda, [1]=V0, [2]=c_01, [3]=A_s, [4]=n_s, [5]=kp, [6]=kc, [7]=pc
+ */
+
 struct background
 {
   /** @name - input parameters initialized by user in input module
@@ -58,14 +62,16 @@ struct background
   double H0; /**< \f$ H_0 \f$: Hubble parameter (in fact, [\f$H_0/c\f$]) in \f$ Mpc^{-1} \f$ */
   double h;  /**< reduced Hubble parameter */
 
-  double Omega0_g; /**< \f$ \Omega_{0 \gamma} \f$: photons */
-  double T_cmb;    /**< \f$ T_{cmb} \f$: current CMB temperature in Kelvins */
+  double Omega0_g;   /**< \f$ \Omega_{0 \gamma} \f$: photons */
+  double T_cmb;      /**< \f$ T_{cmb} \f$: current CMB temperature in Kelvins */
 
-  double Omega0_b; /**< \f$ \Omega_{0 b} \f$: baryons */
+  double Omega0_b;   /**< \f$ \Omega_{0 b} \f$: baryons */
 
-  double Omega0_ur; /**< \f$ \Omega_{0 \nu r} \f$: ultra-relativistic neutrinos */
+  double Omega0_ur;  /**< \f$ \Omega_{0 \nu r} \f$: ultra-relativistic neutrinos */
 
-  double Omega0_cdm;      /**< \f$ \Omega_{0 cdm} \f$: cold dark matter */
+  double Omega0_cdm; /**< \f$ \Omega_{0 cdm} \f$: cold dark matter */
+
+  double Omega0_edm; /**< ET: entropic dark matter (dust) */
 
   double Omega0_idm; /**< \f$ \Omega_{0 idm} \f$: interacting dark matter with photons, baryons, and idr */
 
@@ -164,6 +170,7 @@ struct background
   int index_bg_rho_g;         /**< photon density */
   int index_bg_rho_b;         /**< baryon density */
   int index_bg_rho_cdm;       /**< cdm density */
+  int index_bg_rho_edm;       /**< ET: rho of entropic dark matter */
   int index_bg_rho_idm;       /**< idm density */
   int index_bg_rho_lambda;    /**< cosmological constant density */
   int index_bg_rho_fld;       /**< fluid density */
@@ -178,6 +185,7 @@ struct background
   int index_bg_V_scf;         /**< scalar field potential V */
   int index_bg_dV_scf;        /**< scalar field potential derivative V' */
   int index_bg_ddV_scf;       /**< scalar field potential second derivative V'' */
+  int index_bg_euler_coef;    /**< ET: coupling coeff B = n*theta' - d(rho)/ds */
   int index_bg_rho_scf;       /**< scalar field energy density */
   int index_bg_p_scf;         /**< scalar field pressure */
   int index_bg_p_prime_scf;         /**< scalar field pressure */
@@ -280,6 +288,7 @@ struct background
   //@{
 
   short has_cdm;       /**< presence of cold dark matter? */
+  short has_edm;       /**< ET: entropic dark matter present? */
   short has_idm;       /**< presence of interacting dark matter with photons, baryons, and idr */
   short has_dcdm;      /**< presence of decaying cold dark matter? */
   short has_dr;        /**< presence of relativistic decay radiation? */
@@ -568,6 +577,54 @@ extern "C" {
                double phi,
                double phi_prime
                );
+
+  /* ================================================================
+   ET: Field-space metric, potential, and coupling functions.
+   Signatures are GENERAL. Bodies (in background.c) are the simple
+   specialization. To generalize, edit ONLY the bodies.
+   ================================================================ */
+  double G_00(struct background *pba, 
+              double s, 
+              double phi);
+
+  double G_01(struct background *pba, 
+              double s, 
+              double phi);
+
+  double G_11(struct background *pba, 
+              double s, 
+              double phi);
+
+  double G_11_ds(struct background *pba, 
+                double s, 
+                double phi);
+
+  double G_11_dphi(struct background *pba, 
+                  double s, 
+                  double phi);
+
+  double G_11_dsdphi(struct background *pba, 
+                    double s, 
+                    double phi);
+
+  double G_11_dphidphi(struct background *pba, 
+                    double s, 
+                    double phi);
+
+
+  double Gamma_011(struct background *pba, 
+                  double s, 
+                  double phi);
+
+  double V_edm(struct background *pba, double s, double phi);
+  double dV_edm_ds(struct background *pba, double s, double phi);
+  double dV_edm_dphi(struct background *pba, double s, double phi);
+  double ddV_edm_dsds(struct background *pba, double s, double phi);
+  double ddV_edm_dsdphi(struct background *pba, double s, double phi);
+  double ddV_edm_dphidphi(struct background *pba, double s, double phi);
+
+  double B_edm_background(struct background *pba,
+                        double s, double phi, double phi_prime, double a);
 
 #ifdef __cplusplus
 }

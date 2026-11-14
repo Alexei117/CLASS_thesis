@@ -2563,6 +2563,14 @@ int input_read_parameters_species(struct file_content * pfc,
     ppt->three_cvis2_ur = 3.*param2;
   }
 
+  /* ET: 3.b) Omega0_edm */
+  class_call(parser_read_double(pfc,"Omega_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  class_call(parser_read_double(pfc,"omega_edm",&param2,&flag2,errmsg), errmsg, errmsg);
+  class_test(((flag1 == _TRUE_) && (flag2 == _TRUE_)), errmsg,
+             "You can only enter one of 'Omega_edm' or 'omega_edm'.");
+  if (flag1 == _TRUE_) pba->Omega0_edm = param1;
+  if (flag2 == _TRUE_) pba->Omega0_edm = param2/pba->h/pba->h;
+  class_test(pba->Omega0_edm < 0., errmsg, "Omega_edm must be non-negative.");
 
   /** 4) Omega_0_cdm (CDM) */
   /* Read */
@@ -3299,6 +3307,7 @@ int input_read_parameters_species(struct file_content * pfc,
   Omega_tot = pba->Omega0_g;
   Omega_tot += pba->Omega0_b;
   Omega_tot += pba->Omega0_ur;
+  Omega_tot += pba->Omega0_edm;
   Omega_tot += pba->Omega0_cdm;
   Omega_tot += pba->Omega0_idm;
   Omega_tot += pba->Omega0_dcdmdr;
@@ -6008,6 +6017,9 @@ int input_default_params(struct background *pba,
   /** 4) CDM density */
   pba->Omega0_cdm = 0.1201075/pow(pba->h,2);
 
+  /** 4.a) EDM density */
+  pba->Omega0_edm = 0.;   /* ET: no edm by default */
+
   /** 5) ncdm sector */
   /** 5.a) Number of distinct species */
   pba->N_ncdm = 0;
@@ -6081,7 +6093,7 @@ int input_default_params(struct background *pba,
   /** 9) Dark energy contributions */
   pba->Omega0_fld = 0.;
   pba->Omega0_scf = 0.;
-  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr -pba->Omega0_idm;
+  pba->Omega0_lambda = 1.-pba->Omega0_k-pba->Omega0_g-pba->Omega0_ur-pba->Omega0_b-pba->Omega0_cdm-pba->Omega0_ncdm_tot-pba->Omega0_dcdmdr - pba->Omega0_idr -pba->Omega0_idm -pba->Omega0_edm;
   /** 8.a) Omega fluid */
   /** 8.a.1) PPF approximation */
   pba->use_ppf = _TRUE_;
