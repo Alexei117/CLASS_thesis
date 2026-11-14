@@ -73,6 +73,16 @@ struct background
 
   double Omega0_edm; /**< ET: entropic dark matter (dust) */
 
+  /* ET: edm-specific parameters (dedicated fields separate from scf_parameters to avoid collision with vanilla V_p_scf) */
+  double lambda_edm;   /**< ET: potential slope of edm potential V_0 e^{-lambda phi} */
+  double V0_edm;       /**< ET: potential amplitude (in Teixeira units) */
+  double c01_edm;      /**< ET: cross-coupling G_01 (constant) */
+  double A_s_edm;      /**< ET: entropy perturbation amplitude */
+  double n_s_edm;      /**< ET: entropy perturbation tilt */
+  double kp_edm;       /**< ET: entropy pivot scale [1/Mpc] */
+  double kc_edm;       /**< ET: entropy cutoff scale [1/Mpc] */
+  double pc_edm;       /**< ET: entropy cutoff power */
+
   double Omega0_idm; /**< \f$ \Omega_{0 idm} \f$: interacting dark matter with photons, baryons, and idr */
 
 

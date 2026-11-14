@@ -6737,20 +6737,11 @@ int perturbations_initial_conditions(struct precision * ppr,
     }
 
     /* ET: Teixeira-style entropy ansatz.
-    Requires scf_parameters_size >= 8, layout:
-    [3]=A_s, [4]=n_s, [5]=kp, [6]=kc, [7]=pc
-    Guard against short user arrays to avoid segfault. */
+    Parameters now live in dedicated edm fields (A_s_edm, n_s_edm, kp_edm, kc_edm, pc_edm).
+    Only set when scf slot is allocated (has_scf = TRUE) to avoid y[-1]. */
     if (pba->has_scf == _TRUE_) {
-      if (pba->scf_parameters_size >= 8) {
-      double As = pba->scf_parameters[3];
-      double ns = pba->scf_parameters[4];
-      double kp = pba->scf_parameters[5];
-      double kc = pba->scf_parameters[6];
-      double pc = pba->scf_parameters[7];
-      delta_s_ini = As * pow(k/kp, ns) * exp(-pow(k/kc, pc));
-      } else {
-        delta_s_ini = 0.;   /* not enough params -> no entropy (safe fallback) */
-      }
+      delta_s_ini = pba->A_s_edm * pow(k/pba->kp_edm, pba->n_s_edm)
+                    * exp(-pow(k/pba->kc_edm, pba->pc_edm));
       ppw->pv->y[ppw->pv->index_pt_delta_s] = delta_s_ini;
     }
 

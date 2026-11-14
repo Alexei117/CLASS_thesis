@@ -3058,7 +3058,7 @@ double G_00(struct background *pba, double s, double phi) {
 
 double G_01(struct background *pba, double s, double phi) {
   (void)s; (void)phi;
-  return pba->scf_parameters[2];   /* currently: constant c_01 */
+  return pba->c01_edm;
 }
 
 double G_11(struct background *pba, double s, double phi) {
@@ -3102,8 +3102,8 @@ double Gamma_011(struct background *pba, double s, double phi) {
 
 double V_edm(struct background *pba, double s, double phi) {
   (void)s;
-  return pba->scf_parameters[1] * V_EDM_UNITS
-       * exp(-pba->scf_parameters[0] * phi);   /* V_0 e^{-lambda phi} */
+  return pba->V0_edm * V_EDM_UNITS
+     * exp(-pba->lambda_edm * phi);   /* V_0 e^{-lambda phi} */
 }
 
 double dV_edm_ds(struct background *pba, double s, double phi) {
@@ -3113,8 +3113,8 @@ double dV_edm_ds(struct background *pba, double s, double phi) {
 
 double dV_edm_dphi(struct background *pba, double s, double phi) {
   (void)s;
-  return -pba->scf_parameters[0] * pba->scf_parameters[1] * V_EDM_UNITS
-       * exp(-pba->scf_parameters[0] * phi);
+  return -pba->lambda_edm * pba->V0_edm * V_EDM_UNITS
+     * exp(-pba->lambda_edm * phi);
 }
 
 double ddV_edm_dsds(struct background *pba, double s, double phi) {
@@ -3129,8 +3129,8 @@ double ddV_edm_dsdphi(struct background *pba, double s, double phi) {
 
 double ddV_edm_dphidphi(struct background *pba, double s, double phi) {
   (void)s;
-  double lam = pba->scf_parameters[0];
-  return lam*lam * pba->scf_parameters[1] * V_EDM_UNITS
+  double lam = pba->lambda_edm;
+  return lam*lam * pba->V0_edm * V_EDM_UNITS
        * exp(-lam * phi);
 }
 

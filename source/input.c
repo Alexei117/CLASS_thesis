@@ -2572,6 +2572,31 @@ int input_read_parameters_species(struct file_content * pfc,
   if (flag2 == _TRUE_) pba->Omega0_edm = param2/pba->h/pba->h;
   class_test(pba->Omega0_edm < 0., errmsg, "Omega_edm must be non-negative.");
 
+  /* ET: edm-specific parameters (all optional, defaults from input_default_params) */
+  class_call(parser_read_double(pfc,"lambda_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->lambda_edm = param1;
+
+  class_call(parser_read_double(pfc,"V0_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->V0_edm = param1;
+
+  class_call(parser_read_double(pfc,"c01_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->c01_edm = param1;
+
+  class_call(parser_read_double(pfc,"A_s_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->A_s_edm = param1;
+
+  class_call(parser_read_double(pfc,"n_s_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->n_s_edm = param1;
+
+  class_call(parser_read_double(pfc,"kp_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->kp_edm = param1;
+
+  class_call(parser_read_double(pfc,"kc_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->kc_edm = param1;
+
+  class_call(parser_read_double(pfc,"pc_edm",&param1,&flag1,errmsg), errmsg, errmsg);
+  if (flag1 == _TRUE_) pba->pc_edm = param1;
+
   /** 4) Omega_0_cdm (CDM) */
   /* Read */
   class_call(parser_read_double(pfc,"Omega_cdm",&param1,&flag1,errmsg),
@@ -6019,6 +6044,16 @@ int input_default_params(struct background *pba,
 
   /** 4.a) EDM density */
   pba->Omega0_edm = 0.;   /* ET: no edm by default */
+
+  /* ET: edm parameter defaults */
+  pba->lambda_edm = 0.1;
+  pba->V0_edm     = 1.0;
+  pba->c01_edm    = 0.0;
+  pba->A_s_edm    = 0.0;
+  pba->n_s_edm    = 0.0;
+  pba->kp_edm     = 0.05;
+  pba->kc_edm     = 1.0;
+  pba->pc_edm     = 2.0;
 
   /** 5) ncdm sector */
   /** 5.a) Number of distinct species */
