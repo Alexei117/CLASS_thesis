@@ -4080,7 +4080,7 @@ int perturbations_vector_init(
 
     /* ET: edm (mirrors cdm when has_edm) */
     class_define_index(ppv->index_pt_delta_edm, pba->has_edm, index_pt, 1);
-    class_define_index(ppv->index_pt_theta_edm, pba->has_edm && (ppt->gauge == newtonian), index_pt, 1);
+    class_define_index(ppv->index_pt_theta_edm, pba->has_edm, index_pt, 1);
     class_define_index(ppv->index_pt_delta_s,   pba->has_scf, index_pt, 1);   /* ET */
 
     /* idm */
@@ -4722,7 +4722,9 @@ int perturbations_vector_init(
 
       /* ET: edm snapshot */
       if (pba->has_edm == _TRUE_) {
-        ppv->y[ppv->index_pt_delta_edm] = ppw->pv->y[ppw->pv->index_pt_delta_edm];
+        /* ET: snapshot from primary vector to output vector */
+        if (ppv->index_pt_delta_edm != -1)
+          ppv->y[ppv->index_pt_delta_edm] = ppw->pv->y[ppw->pv->index_pt_delta_edm];
         if (ppv->index_pt_theta_edm != -1)
           ppv->y[ppv->index_pt_theta_edm] = ppw->pv->y[ppw->pv->index_pt_theta_edm];
       }
