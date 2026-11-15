@@ -3027,21 +3027,18 @@ double ddV_p_scf(
 /** Fianlly we can obtain the overall potential \f$ V = V_p*V_e \f$
  */
 
-double V_scf(
-             struct background *pba,
-             double phi) {
+double V_scf(struct background *pba, double phi) {
+  if (pba->has_edm == _TRUE_) return V_edm(pba, 0., phi);   /* ET */
   return  V_e_scf(pba,phi)*V_p_scf(pba,phi);
 }
 
-double dV_scf(
-              struct background *pba,
-              double phi) {
+double dV_scf(struct background *pba, double phi) {
+  if (pba->has_edm == _TRUE_) return dV_edm_dphi(pba, 0., phi);   /* ET */
   return dV_e_scf(pba,phi)*V_p_scf(pba,phi) + V_e_scf(pba,phi)*dV_p_scf(pba,phi);
 }
 
-double ddV_scf(
-               struct background *pba,
-               double phi) {
+double ddV_scf(struct background *pba, double phi) {
+  if (pba->has_edm == _TRUE_) return ddV_edm_dphidphi(pba, 0., phi);   /* ET */
   return ddV_e_scf(pba,phi)*V_p_scf(pba,phi) + 2*dV_e_scf(pba,phi)*dV_p_scf(pba,phi) + V_e_scf(pba,phi)*ddV_p_scf(pba,phi);
 }
 
