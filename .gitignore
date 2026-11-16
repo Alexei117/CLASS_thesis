@@ -14,3 +14,6 @@ RealSpaceInterface/cache/
 .DS_Store
 doc/manual/html
 doc/manual/latex
+*.bak_*
+*.pre5b3
+classy.egg-info/
