@@ -3482,6 +3482,18 @@ int input_read_parameters_species(struct file_content * pfc,
     if ((fabs(scf_lambda) < 3.)&&(pba->background_verbose>1)){
       printf("'scf_lambda' = %e < 3 won't be tracking (for exp quint) unless overwritten by tuning function.",scf_lambda);
     }
+
+    /* ET: when has_edm=TRUE, scf_parameters overrides edm potential params.
+       Enables shooting on V0_edm via scf_tuning_index=1.
+       Convention: scf_parameters = (lambda_edm, V0_edm, [phi_ini, phi_prime]) */
+    if (pba->scf_parameters_size > 0) {
+      pba->lambda_edm = pba->scf_parameters[0];
+      if (pba->scf_parameters_size > 1)
+        pba->V0_edm = pba->scf_parameters[1];
+      if (pba->background_verbose > 0)
+        printf(" -> has_edm: lambda_edm=%.4g, V0_edm=%.4g (from scf_parameters), tuning_index=%d\n",
+               pba->lambda_edm, pba->V0_edm, pba->scf_tuning_index);
+    }
   }
 
   return _SUCCESS_;

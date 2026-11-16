@@ -839,6 +839,12 @@ int background_init(
              pba->error_message,
              pba->error_message);
 
+  /* ET: refresh V0_edm from scf_parameters[tuning_index] each background_init.
+     Enables shooting on V0_edm (index 1) when has_edm=TRUE. */
+  if (pba->has_edm == _TRUE_ && pba->has_scf == _TRUE_ &&
+      pba->scf_parameters_size > 1)
+    pba->V0_edm = pba->scf_parameters[pba->scf_tuning_index];
+
   /** - check that input parameters make sense and write additional information about them */
   class_call(background_checks(ppr,pba),
              pba->error_message,
