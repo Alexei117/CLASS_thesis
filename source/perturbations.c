@@ -5801,6 +5801,10 @@ int perturbations_initial_conditions(struct precision * ppr,
                                      double tau,
                                      struct perturbations_workspace * ppw
                                      ) {
+  fprintf(stderr, "PIC_DIAG has_scf=%d has_edm=%d Omega0_scf=%.4e idx_ds=%d\n",
+          pba->has_scf, pba->has_edm, pba->Omega0_scf,
+          ppw->pv->index_pt_delta_s);
+
   /** Summary: */
 
   /** --> Declare local variables */
@@ -5985,6 +5989,16 @@ int perturbations_initial_conditions(struct precision * ppr,
         ppw->pv->y[ppw->pv->index_pt_delta_edm] = 3./4.*ppw->pv->y[ppw->pv->index_pt_delta_g];
         if (ppw->pv->index_pt_theta_edm != -1)
           ppw->pv->y[ppw->pv->index_pt_theta_edm] = 0.;
+      }
+
+      /* ET: entropy ansatz IC (sync-gauge scalar mode) */
+      if (pba->has_scf == _TRUE_ && ppw->pv->index_pt_delta_s != -1) {
+        delta_s_ini = pba->A_s_edm * pow(k/pba->kp_edm, pba->n_s_edm)
+                      * exp(-pow(k/pba->kc_edm, pba->pc_edm));
+        ppw->pv->y[ppw->pv->index_pt_delta_s] = delta_s_ini;
+        fprintf(stderr, "DSINI k=%.4e A_s=%.4e idx_ds=%d delta_s=%.6e\n",
+                k, pba->A_s_edm, ppw->pv->index_pt_delta_s,
+                ppw->pv->y[ppw->pv->index_pt_delta_s]);
       }
 
       /* interacting dark matter */
@@ -6738,15 +6752,6 @@ int perturbations_initial_conditions(struct precision * ppr,
       ppw->pv->y[ppw->pv->index_pt_delta_edm] = 0.75 * ppw->pv->y[ppw->pv->index_pt_delta_g];
       if (ppw->pv->index_pt_theta_edm != -1)
         ppw->pv->y[ppw->pv->index_pt_theta_edm] = 0.;   /* adiabatic superhorizon */
-    }
-
-    /* ET: Teixeira-style entropy ansatz.
-    Parameters now live in dedicated edm fields (A_s_edm, n_s_edm, kp_edm, kc_edm, pc_edm).
-    Only set when scf slot is allocated (has_scf = TRUE) to avoid y[-1]. */
-    if (pba->has_scf == _TRUE_) {
-      delta_s_ini = pba->A_s_edm * pow(k/pba->kp_edm, pba->n_s_edm)
-                    * exp(-pow(k/pba->kc_edm, pba->pc_edm));
-      ppw->pv->y[ppw->pv->index_pt_delta_s] = delta_s_ini;
     }
 
   }
@@ -10833,6 +10838,17 @@ int perturbations_derivs(double tau,
           dy[pv->index_pt_delta_edm] = -(y[pv->index_pt_theta_edm] + metric_continuity);
           dy[pv->index_pt_theta_edm] = -a_prime_over_a * y[pv->index_pt_theta_edm];
           if (pba->index_bg_euler_coef != -1 && pv->index_pt_delta_s != -1) {
+            {
+              static int pcount = 0;
+              if (pcount < 5 && pvecback[pba->index_bg_a] > 0.5) {
+                pcount++;
+                fprintf(stderr, "EDMLATE k=%.4e a=%.4e euler=%e ds=%e theta=%e\n",
+                        k, pvecback[pba->index_bg_a],
+                        pvecback[pba->index_bg_euler_coef],
+                        y[pv->index_pt_delta_s],
+                        y[pv->index_pt_theta_edm]);
+              }
+            }
             dy[pv->index_pt_theta_edm] -= (k2 / pvecback[pba->index_bg_rho_edm])
               * pvecback[pba->index_bg_euler_coef] * y[pv->index_pt_delta_s];
           }
