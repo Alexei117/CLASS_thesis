@@ -17,3 +17,4 @@ doc/manual/latex
 *.bak_*
 *.pre5b3
 classy.egg-info/
+*.ini.bak
