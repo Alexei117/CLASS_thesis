@@ -80,3 +80,73 @@ Resolution of l=200 slope drift (was 1.044):
 - Physical c01<1: only 2 points above 3e-7 floor at l=200
 - K(200) signal at eps=0.15 is ~1e-6, near tol=1e-9 floor
 - To constrain at acoustic scales: use P(k) at z=0 or tol=1e-10
+
+## CORRECTION: ISW kernel argument for l=2 sign flip
+
+j_l(x) peaks at x_peak ~ l+1/2. At l=2, k~1.4e-4 Mpc^-1, the peak
+would sit at tau0-tau ~ 21000 Mpc -- BEYOND chi_rec = 14100 Mpc.
+So j_2 NEVER samples its peak in the physical domain; its CMB
+weight comes from the rising x^2/15 tail. For l=3, peak~16700 Mpc
+(also beyond chi_rec), but j_3 at recombination sits at x~3.0,
+close to peak. So l=3 samples the peak region and l=2 does not.
+The sign flip reflects a redshift-dependent sign change in ISW
+source across the two kernels' effective redshift slices.
+(Corrected from earlier draft which quoted 21800 Mpc; the number
+was arithmetically right but physically impossible -- chi_rec
+caps the conformal distance integral at 14100 Mpc.)
+
+## Lambda scan (P3): K(l; lambda) measurement
+
+4 lambda values {0.1, 0.3, 0.6, 1.0}, 3 runs each (baseline c01=0,
+A_s=0; A_s-only c01=0, A_s=0.3; physics c01=0.5, A_s=0.3), tol=1e-9.
+All 12 runs exit=0, no shooting failures even at lambda=1.0.
+
+A_s inertness: |dC/C| = 0.0e+00 for l=2,5,20 at ALL four lambda.
+No stray delta_s term anywhere, for any lambda.
+
+K(l; lambda) values:
+   lambda    K(2)         K(3)         K(5)         K(20)
+   0.1     -4.3145e-03   +6.3096e-03   +6.3414e-03   +1.2680e-03
+   0.3     -1.2260e-02   +1.9112e-02   +1.9154e-02   +3.8341e-03
+   0.6     -2.2469e-02   +3.8868e-02   +3.8789e-02   +7.7774e-03
+   1.0     -3.2801e-02   +6.6558e-02   +6.6047e-02   +1.3273e-02
+
+Effective power law d log|K| / d log lambda:
+   K(5):  1.016   (linear -- B mechanism dominates)
+   K(20): 1.019   (linear)
+   K(2):  0.888   (SUB-linear -- new physics)
+
+Ratio K(lambda)/K(0.1) vs naive prediction lambda/0.1:
+   lambda   l=5 ratio/pred   l=2 ratio/pred
+   0.1      1.000            1.000
+   0.3      1.007            0.947
+   0.6      1.019            0.868
+   1.0      1.042            0.760
+
+Sign of K(2) stays NEGATIVE across all four lambda (magnitude grows
+from -4.3e-3 to -3.3e-2 -- 7.6x larger). Sign flip is robust.
+
+V0(lambda) inference: K(5)*e^{lambda*phi(a=1)} is roughly constant
+across lambda to ~7%, implying V0 grows ~7% from lambda=0.1 to
+lambda=1.0 from shooting. This small V0 drift does not affect the
+linear/sublinear conclusion.
+
+Physical interpretation:
+- At l=5, 20: B = c01*lambda*V0*e^{-lambda*phi} dominates, scales
+  linearly in lambda as predicted. V0(lambda) drift contributes
+  the 4% residual from unity.
+- At l=2: BOTH lambda amplitude AND phi(a) rolling speed grow with
+  lambda. The l=2 kernel integrates over a wide redshift slice
+  (x^2/15 tail), so it weights the AVERAGE of dB/dtau, not the
+  peak. Faster rolling at larger lambda sharpens the peak but
+  leaves the average sublinear. Net K(2) ~ lambda^0.89.
+
+NEW OBSERVABLE: K(2)/K(5) is lambda-dependent:
+   lambda=0.1: ratio = -0.680
+   lambda=0.3: ratio = -0.640
+   lambda=0.6: ratio = -0.579
+   lambda=1.0: ratio = -0.497
+This breaks the amplitude-lambda degeneracy. K(5) measures
+lambda*V0*e^{-lambda*phi}, while K(2)/K(5) measures lambda alone.
+CMB data with <10% sensitivity to low-l shape can distinguish
+lambda=0.1 from lambda=1.0.
