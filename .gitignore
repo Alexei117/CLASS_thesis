@@ -18,3 +18,8 @@ doc/manual/latex
 *.pre5b3
 classy.egg-info/
 *.ini.bak
+
+# Phase 5c artifacts
+output/
+output_archive_*/
+*.log
