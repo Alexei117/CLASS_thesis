@@ -37,3 +37,26 @@ Reproduces σ8 shift to <8% across full paper range.
 ## Plot regeneration
 Plots live in `output/plots/01_*.png` … `05_*.png`.
 See `handoff_class_phase5c_complete.txt` §12 for the plotting script.
+
+## How to run (important: output path)
+
+CLASS derives the output location from the ini's basename *including its
+directory prefix*. Running `./class final_ini/X.ini` writes to
+`output/final_ini/X00_*.dat`, not `output/X00_*.dat`.
+
+One-time setup after a fresh checkout:
+    cd ~/class_mycosmo
+    mkdir -p output/final_ini
+
+Then from ~/class_mycosmo:
+    ./class final_ini/p5_paper_cp001.ini
+    # -> output/final_ini/p5_paper_cp00100_cl.dat, _pk.dat, etc.
+
+Alternatively, copy the file up first if you want output in `output/`:
+    cp final_ini/p5_paper_cp001.ini ./p5_paper_cp001.ini
+    ./class p5_paper_cp001.ini
+    # -> output/p5_paper_cp00100_cl.dat
+
+The canonical originals `test_5c_*.ini` in the main directory also work
+directly and write to `output/test_5c_*00_*.dat`. `final_ini/` is the
+curated subset for reference and paper-reproduction reproducibility.
