@@ -5801,9 +5801,11 @@ int perturbations_initial_conditions(struct precision * ppr,
                                      double tau,
                                      struct perturbations_workspace * ppw
                                      ) {
+  #ifdef DEBUG_VERBOSE_PERTURBATIONS
   fprintf(stderr, "PIC_DIAG has_scf=%d has_edm=%d Omega0_scf=%.4e idx_ds=%d\n",
           pba->has_scf, pba->has_edm, pba->Omega0_scf,
           ppw->pv->index_pt_delta_s);
+#endif
 
   /** Summary: */
 
@@ -5996,9 +5998,11 @@ int perturbations_initial_conditions(struct precision * ppr,
         delta_s_ini = pba->A_s_edm * pow(k/pba->kp_edm, pba->n_s_edm)
                       * exp(-pow(k/pba->kc_edm, pba->pc_edm));
         ppw->pv->y[ppw->pv->index_pt_delta_s] = delta_s_ini;
-        fprintf(stderr, "DSINI k=%.4e A_s=%.4e idx_ds=%d delta_s=%.6e\n",
+        #ifdef DEBUG_VERBOSE_PERTURBATIONS
+  fprintf(stderr, "DSINI k=%.4e A_s=%.4e idx_ds=%d delta_s=%.6e\n",
                 k, pba->A_s_edm, ppw->pv->index_pt_delta_s,
                 ppw->pv->y[ppw->pv->index_pt_delta_s]);
+#endif
       }
 
       /* interacting dark matter */
@@ -10840,7 +10844,7 @@ int perturbations_derivs(double tau,
           if (pba->index_bg_euler_coef != -1 && pv->index_pt_delta_s != -1) {
             {
               static int pcount = 0;
-              if (pcount < 5 && pvecback[pba->index_bg_a] > 0.5) {
+              if (0) {
                 pcount++;
                 fprintf(stderr, "EDMLATE k=%.4e a=%.4e euler=%e ds=%e theta=%e\n",
                         k, pvecback[pba->index_bg_a],
