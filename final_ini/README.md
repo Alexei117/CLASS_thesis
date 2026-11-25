@@ -15,8 +15,6 @@ Data in `output_archive_5c_p1_2nd/`.
 - As0p3_c0p5  : signal    (A_s=0.3, c01=0.5) — for K(ℓ) plot
 - As0p03_c0   : A_s=0.03, c01=0 — for inertness check vs As0p3_c0
 
-Full 30-file A_s×c01 grid preserved in main dir (`test_5c_p2_*.ini`).
-
 ### p3_L* (8) — λ-scan
 4 λ ∈ {0.1, 0.3, 0.6, 1.0}, each baseline (c01=0, A_s=0) and physics (c01=0.5, A_s=0.3).
 Yields K(5) ∝ λ^1.02, K(2) ∝ λ^0.89 (new observable K(2)/K(5)).
@@ -57,6 +55,6 @@ Alternatively, copy the file up first if you want output in `output/`:
     ./class p5_paper_cp001.ini
     # -> output/p5_paper_cp00100_cl.dat
 
-The canonical originals `test_5c_*.ini` in the main directory also work
-directly and write to `output/test_5c_*00_*.dat`. `final_ini/` is the
-curated subset for reference and paper-reproduction reproducibility.
+`final_ini/` is the canonical set for reference and paper-reproduction
+reproducibility; the intermediate `test_5c_*` grids were removed during
+cleanup.
