@@ -6284,6 +6284,12 @@ int perturbations_initial_conditions(struct precision * ppr,
         ppw->pv->y[ppw->pv->index_pt_theta_cdm] = k*k*alpha;
       }
 
+      /* ET: edm (dust, same gauge transformation as cdm) */
+      if (pba->has_edm == _TRUE_) {
+        ppw->pv->y[ppw->pv->index_pt_delta_edm] -= 3.*a_prime_over_a*alpha;
+        ppw->pv->y[ppw->pv->index_pt_theta_edm] = k*k*alpha;
+      }
+
       if (pba->has_idm == _TRUE_){
         ppw->pv->y[ppw->pv->index_pt_delta_idm] -= 3.*a_prime_over_a*alpha;
         ppw->pv->y[ppw->pv->index_pt_theta_idm] += k*k*alpha;
@@ -9482,14 +9488,10 @@ int perturbations_print_variables(double tau,
       }
     }
 
-    /* ET: edm readout */
+    /* ET: edm readout (raw values; converted to Newtonian below, like cdm) */
     if (pba->has_edm == _TRUE_) {
       delta_edm = y[ppw->pv->index_pt_delta_edm];
-      if (ppt->gauge == synchronous || ppw->pv->index_pt_theta_edm == -1) {
-        theta_edm = 0.;
-      } else {
-        theta_edm = y[ppw->pv->index_pt_theta_edm];
-      }
+      theta_edm = y[ppw->pv->index_pt_theta_edm];
     }
 
     if (pba->has_idm == _TRUE_) {
@@ -9636,6 +9638,12 @@ int perturbations_print_variables(double tau,
       if (pba->has_cdm == _TRUE_) {
         delta_cdm -= 3. * pvecback[pba->index_bg_H]*pvecback[pba->index_bg_a]*alpha;
         theta_cdm += k*k*alpha;
+      }
+
+      /* ET: edm (dust, same gauge transformation as cdm) */
+      if (pba->has_edm == _TRUE_) {
+        delta_edm -= 3. * pvecback[pba->index_bg_H]*pvecback[pba->index_bg_a]*alpha;
+        theta_edm += k*k*alpha;
       }
 
       if (pba->has_idm == _TRUE_) {
