@@ -3,7 +3,6 @@ output/
 build/
 class
 *.prof
-*.ini
 libclass.a
 *out
 python/classy.cpp
@@ -18,6 +17,13 @@ doc/manual/latex
 *.pre5b3
 classy.egg-info/
 *.ini.bak
+
+# Scratch/experimental input files. Keep only the curated physics sets
+# (final_ini/, final_ini_p6/, final_ini_p6_v2/) tracked.
+test_*.ini
+fine_*.ini
+sweep_*.ini
+ini_fig1/
 
 # Phase 5c artifacts
 output/
