@@ -5801,12 +5801,6 @@ int perturbations_initial_conditions(struct precision * ppr,
                                      double tau,
                                      struct perturbations_workspace * ppw
                                      ) {
-  #ifdef DEBUG_VERBOSE_PERTURBATIONS
-  fprintf(stderr, "PIC_DIAG has_scf=%d has_edm=%d Omega0_scf=%.4e idx_ds=%d\n",
-          pba->has_scf, pba->has_edm, pba->Omega0_scf,
-          ppw->pv->index_pt_delta_s);
-#endif
-
   /** Summary: */
 
   /** --> Declare local variables */
@@ -5998,11 +5992,6 @@ int perturbations_initial_conditions(struct precision * ppr,
         delta_s_ini = pba->A_s_edm * pow(k/pba->kp_edm, pba->n_s_edm)
                       * exp(-pow(k/pba->kc_edm, pba->pc_edm));
         ppw->pv->y[ppw->pv->index_pt_delta_s] = delta_s_ini;
-        #ifdef DEBUG_VERBOSE_PERTURBATIONS
-  fprintf(stderr, "DSINI k=%.4e A_s=%.4e idx_ds=%d delta_s=%.6e\n",
-                k, pba->A_s_edm, ppw->pv->index_pt_delta_s,
-                ppw->pv->y[ppw->pv->index_pt_delta_s]);
-#endif
       }
 
       /* interacting dark matter */
@@ -7506,6 +7495,53 @@ int perturbations_einstein(
 
 }
 
+/* ================================================================
+ * ET: gauge-independent scalar-field-sector density and pressure
+ * perturbations, including the s--phi interaction terms of the
+ * two-field stress-energy tensor:
+ *
+ *   delta rho_int =     G_11  phi' delta phi'
+ *                   + (1/2) phi'^2 (G_11,0 delta s + G_11,1 delta phi)
+ *                   + (V_,0 delta s + V_,1 delta phi)
+ *   delta p_int   =     G_11  phi' delta phi'
+ *                   + (1/2) phi'^2 (G_11,0 delta s + G_11,1 delta phi)
+ *                   - (V_,0 delta s + V_,1 delta phi)
+ *
+ * in CLASS's scalar-field normalization (overall factor 1/3;
+ * phi' = d phi/d tau).  The Newtonian-gauge metric term
+ * -phi'^2 psi / a^2 must be added by the caller.  The background
+ * s-field is frozen at s = 0.
+ * ================================================================ */
+static void scf_delta_rho_p(struct background * pba,
+                            struct perturbations_workspace * ppw,
+                            double * y,
+                            double * delta_rho,
+                            double * delta_p) {
+
+  double a          = ppw->pvecback[pba->index_bg_a];
+  double a2         = a*a;
+  double phi        = ppw->pvecback[pba->index_bg_phi_scf];
+  double phi_prime  = ppw->pvecback[pba->index_bg_phi_prime_scf];
+  double dphi       = y[ppw->pv->index_pt_phi_scf];
+  double dphi_prime = y[ppw->pv->index_pt_phi_prime_scf];
+  double ds = (ppw->pv->index_pt_delta_s != -1)
+                ? y[ppw->pv->index_pt_delta_s] : 0.;
+
+  double G11      = G_11(pba, 0., phi);
+  double G11_ds   = G_11_ds(pba, 0., phi);
+  double G11_dphi = G_11_dphi(pba, 0., phi);
+  double dV_ds    = dV_edm_ds(pba, 0., phi);
+  double dV_dphi  = ppw->pvecback[pba->index_bg_dV_scf];
+
+  double rho_kin = 1./a2 * G11 * phi_prime * dphi_prime;
+  double rho_met = 0.5/a2 * phi_prime * phi_prime
+                 * (G11_ds * ds + G11_dphi * dphi);
+  double rho_pot = dV_ds * ds + dV_dphi * dphi;
+
+  *delta_rho = 1./3. * (rho_kin + rho_met + rho_pot);
+  *delta_p   = 1./3. * (rho_kin + rho_met - rho_pot);
+}
+
 /**
  * Compute total stress-energy tensor (bacvkground and perturbations)
  *
@@ -7931,26 +7967,15 @@ int perturbations_total_stress_energy(
     */
     if (pba->has_scf == _TRUE_) {
 
-      if (ppt->gauge == synchronous){
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
-        delta_p_scf = 1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           - ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
-      }
-      else{
+      /* ET: phi--s sector density and pressure (incl. interaction terms) */
+      scf_delta_rho_p(pba, ppw, y, &delta_rho_scf, &delta_p_scf);
+
+      if (ppt->gauge == newtonian) {
         /* equation for psi */
         psi = y[ppw->pv->index_pt_phi] - 4.5 * (a2/k/k) * ppw->rho_plus_p_shear;
 
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi);
-        delta_p_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           - ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi);
+        delta_rho_scf -= 1./3./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi;
+        delta_p_scf   -= 1./3./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*psi;
       }
 
       ppw->delta_rho += delta_rho_scf;
@@ -7959,7 +7984,7 @@ int perturbations_total_stress_energy(
         double delta_s_val_dq = (ppw->pv->index_pt_delta_s != -1) ? y[ppw->pv->index_pt_delta_s] : 0.;
         ppw->rho_plus_p_theta += 1./3.
           * k*k/a2 * ppw->pvecback[pba->index_bg_phi_prime_scf]
-          * (y[ppw->pv->index_pt_phi_scf] + pba->c01_edm * delta_s_val_dq);
+          * (y[ppw->pv->index_pt_phi_scf] + G_01(pba, 0., ppw->pvecback[pba->index_bg_phi_scf]) * delta_s_val_dq);
       }
 
       ppw->delta_p += delta_p_scf;
@@ -8376,7 +8401,7 @@ int perturbations_sources(
   double * pvecthermo;
   double * pvecmetric;
 
-  double delta_g, delta_rho_scf, rho_plus_p_theta_scf;
+  double delta_g, delta_rho_scf, delta_p_scf, rho_plus_p_theta_scf;
   double a_prime_over_a=0.;  /* (a'/a) */
   double a_prime_over_a_prime=0.;  /* (a'/a)' */
   double w_fld,dw_over_da_fld,integral_fld;
@@ -8812,19 +8837,12 @@ int perturbations_sources(
 
     /* delta_scf */
     if (ppt->has_source_delta_scf == _TRUE_) {
-      if (ppt->gauge == synchronous){
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf])
-          + 3.*a_prime_over_a*(1.+pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf])*theta_over_k2; // N-body gauge correction
-      }
-      else{
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi])
-          + 3.*a_prime_over_a*(1.+pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf])*theta_over_k2; // N-body gauge correction
-      }
+      /* ET: phi--s sector density (incl. interaction terms) */
+      scf_delta_rho_p(pba, ppw, y, &delta_rho_scf, &delta_p_scf);
+      if (ppt->gauge == newtonian)
+        delta_rho_scf -= 1./3./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi];
+
+      delta_rho_scf += 3.*a_prime_over_a*(1.+pvecback[pba->index_bg_p_scf]/pvecback[pba->index_bg_rho_scf])*theta_over_k2; // N-body gauge correction
       _set_source_(ppt->index_tp_delta_scf) = delta_rho_scf/pvecback[pba->index_bg_rho_scf];
     }
 
@@ -8944,7 +8962,7 @@ int perturbations_sources(
         double delta_s_val_src = (ppw->pv->index_pt_delta_s != -1) ? y[ppw->pv->index_pt_delta_s] : 0.;
         rho_plus_p_theta_scf = 1./3.
           * k*k/a2 * ppw->pvecback[pba->index_bg_phi_prime_scf]
-          * (y[ppw->pv->index_pt_phi_scf] + pba->c01_edm * delta_s_val_src);
+          * (y[ppw->pv->index_pt_phi_scf] + G_01(pba, 0., ppw->pvecback[pba->index_bg_phi_scf]) * delta_s_val_src);
       }
 
       _set_source_(ppt->index_tp_theta_scf) = rho_plus_p_theta_scf/(pvecback[pba->index_bg_rho_scf]+pvecback[pba->index_bg_p_scf])
@@ -9252,7 +9270,7 @@ int perturbations_print_variables(double tau,
   double delta_dr=0.,theta_dr=0.,shear_dr=0., f_dr=1.0;
   double delta_ur=0.,theta_ur=0.,shear_ur=0.,l0_ur=0.,l2_ur=0.,l4_ur=0.;
   double delta_idr=0., theta_idr=0., shear_idr=0.;
-  double delta_rho_scf=0., rho_plus_p_theta_scf=0.;
+  double delta_rho_scf=0., delta_p_scf=0., rho_plus_p_theta_scf=0.;
   double delta_scf=0., theta_scf=0.;
   /** - ncdm sector begins */
   int n_ncdm;
@@ -9474,15 +9492,6 @@ int perturbations_print_variables(double tau,
       }
     }
 
-    /* ET debug */
-   /* if (pba->has_edm == _TRUE_) {
-      fprintf(stderr, "PRINT tau=%.6e  y[delta_edm]=%.15e  y[delta_cdm]=%.15e  y[delta_g]=%.15e\n",
-        tau,
-        y[ppw->pv->index_pt_delta_edm],
-        y[ppw->pv->index_pt_delta_cdm],
-        y[ppw->pv->index_pt_delta_g]);
-    }
-    */
     if (pba->has_idm == _TRUE_) {
       delta_idm = y[ppw->pv->index_pt_delta_idm];
       theta_idm = y[ppw->pv->index_pt_theta_idm];
@@ -9580,23 +9589,16 @@ int perturbations_print_variables(double tau,
     }
 
     if (pba->has_scf == _TRUE_){
-      if (ppt->gauge == synchronous){
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]);
-      }
-      else{
-        delta_rho_scf =  1./3.*
-          (1./a2*ppw->pvecback[pba->index_bg_phi_prime_scf]*y[ppw->pv->index_pt_phi_prime_scf]
-           + ppw->pvecback[pba->index_bg_dV_scf]*y[ppw->pv->index_pt_phi_scf]
-           - 1./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi]);
-      }
+      /* ET: phi--s sector density (incl. interaction terms) */
+      scf_delta_rho_p(pba, ppw, y, &delta_rho_scf, &delta_p_scf);
+      if (ppt->gauge == newtonian)
+        delta_rho_scf -= 1./3./a2*pow(ppw->pvecback[pba->index_bg_phi_prime_scf],2)*ppw->pvecmetric[ppw->index_mt_psi];
 
       {
         double delta_s_val_pv = (ppw->pv->index_pt_delta_s != -1) ? y[ppw->pv->index_pt_delta_s] : 0.;
         rho_plus_p_theta_scf = 1./3.
           * k*k/a2 * ppw->pvecback[pba->index_bg_phi_prime_scf]
-          * (y[ppw->pv->index_pt_phi_scf] + pba->c01_edm * delta_s_val_pv);
+          * (y[ppw->pv->index_pt_phi_scf] + G_01(pba, 0., ppw->pvecback[pba->index_bg_phi_scf]) * delta_s_val_pv);
       }
 
       delta_scf = delta_rho_scf/pvecback[pba->index_bg_rho_scf];
@@ -10833,32 +10835,17 @@ int perturbations_derivs(double tau,
 
     /* ET: ---> edm */
     if (pba->has_edm == _TRUE_) {
-      if (ppt->gauge == newtonian) {
+      if (pv->index_pt_theta_edm != -1) {
         dy[pv->index_pt_delta_edm] = -(y[pv->index_pt_theta_edm] + metric_continuity);
-        dy[pv->index_pt_theta_edm] = -a_prime_over_a*y[pv->index_pt_theta_edm] + metric_euler;
-      }
-      if (ppt->gauge == synchronous) {
-        if (pv->index_pt_theta_edm != -1) {
-          dy[pv->index_pt_delta_edm] = -(y[pv->index_pt_theta_edm] + metric_continuity);
-          dy[pv->index_pt_theta_edm] = -a_prime_over_a * y[pv->index_pt_theta_edm];
-          if (pba->index_bg_euler_coef != -1 && pv->index_pt_delta_s != -1) {
-            {
-              static int pcount = 0;
-              if (0) {
-                pcount++;
-                fprintf(stderr, "EDMLATE k=%.4e a=%.4e euler=%e ds=%e theta=%e\n",
-                        k, pvecback[pba->index_bg_a],
-                        pvecback[pba->index_bg_euler_coef],
-                        y[pv->index_pt_delta_s],
-                        y[pv->index_pt_theta_edm]);
-              }
-            }
-            dy[pv->index_pt_theta_edm] -= (k2 / pvecback[pba->index_bg_rho_edm])
-              * pvecback[pba->index_bg_euler_coef] * y[pv->index_pt_delta_s];
-          }
-        } else {
-          dy[pv->index_pt_delta_edm] = -metric_continuity;
+        dy[pv->index_pt_theta_edm] = -a_prime_over_a * y[pv->index_pt_theta_edm] + metric_euler;
+        /* ET: entropy coupling source, gauge-invariant (delta s frozen, s_bg=0).
+           metric_euler is 0 in synchronous gauge and k^2 psi in Newtonian. */
+        if (pba->index_bg_euler_coef != -1 && pv->index_pt_delta_s != -1) {
+          dy[pv->index_pt_theta_edm] -= (k2 / pvecback[pba->index_bg_rho_edm])
+            * pvecback[pba->index_bg_euler_coef] * y[pv->index_pt_delta_s];
         }
+      } else {
+        dy[pv->index_pt_delta_edm] = -metric_continuity;
       }
     }
 
@@ -11037,7 +11024,7 @@ int perturbations_derivs(double tau,
         dy[pv->index_pt_phi_prime_scf] = - 2.*a_prime_over_a*y[pv->index_pt_phi_prime_scf]
           - metric_continuity*pvecback[pba->index_bg_phi_prime_scf]
           - (k2 + a2*pvecback[pba->index_bg_ddV_scf])*y[pv->index_pt_phi_scf]
-          - pba->c01_edm * k2 * delta_s_val_kg;   /* ET Phase 5b-3: KG entropy source */
+          - G_01(pba, 0., pvecback[pba->index_bg_phi_scf]) * k2 * delta_s_val_kg;   /* ET: KG entropy source */
 }
 
     }
